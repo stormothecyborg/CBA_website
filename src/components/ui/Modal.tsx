@@ -4,14 +4,14 @@ import { X } from 'lucide-react';
 
 // Define props for the Modal component
 interface ModalProps {
-  isOpen: boolean;             // Controls visibility of the modal
-  onClose: () => void;         // Function to close the modal
-  title: string;               // Modal title
-  children: React.ReactNode;   // Content inside the modal
-  size?: 'sm' | 'md' | 'lg';   // Optional size variant
+  isOpen: boolean;             // Controls whether the modal is visible
+  onClose: () => void;         // Callback to close the modal (e.g., on overlay or button click)
+  title: string;               // Title text displayed at the top of the modal
+  children: React.ReactNode;   // Modal body content
+  size?: 'sm' | 'md' | 'lg';   // Optional size modifier for modal width
 }
 
-// Functional Modal component
+// Reusable Modal component with animation, backdrop, and close functionality
 export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
@@ -19,49 +19,50 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   size = 'md'
 }) => {
-  // Width classes based on selected size
+  // Tailwind width utility classes for different modal sizes
   const sizeClasses = {
-    sm: 'max-w-md',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl'
+    sm: 'max-w-md',     // Small modal
+    md: 'max-w-lg',     // Medium modal (default)
+    lg: 'max-w-2xl',    // Large modal
   };
 
   return (
-    <AnimatePresence> {/* Enables exit animations */}
+    // AnimatePresence allows the modal and overlay to animate out when unmounted
+    <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          {/* Centered modal container */}
+          {/* Center the modal vertically and horizontally */}
           <div className="flex min-h-screen items-center justify-center p-4">
             
-            {/* Background overlay with fade in/out */}
+            {/* Overlay background (clicking it triggers onClose) */}
             <motion.div
-              initial={{ opacity: 0 }}
+              initial={{ opacity: 0 }}            // Fade in
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              exit={{ opacity: 0 }}               // Fade out
               className="fixed inset-0 bg-black bg-opacity-50"
-              onClick={onClose} // Close modal when overlay is clicked
+              onClick={onClose}                   // Clicking outside modal closes it
             />
             
-            {/* Modal content container with scale and slide animation */}
+            {/* Modal content with entrance and exit animations */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ duration: 0.2 }}
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}   // Start smaller and slightly lower
+              animate={{ opacity: 1, scale: 1, y: 0 }}       // Animate to full size and position
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}      // Reverse on exit
+              transition={{ duration: 0.2 }}                 // Smooth transition
               className={`relative w-full ${sizeClasses[size]} bg-white rounded-2xl shadow-2xl p-6`}
             >
-              {/* Modal header with title and close button */}
+              {/* Modal header section with title and close icon */}
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
                 <button
-                  onClick={onClose}
+                  onClick={onClose} // Close when X is clicked
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  <X className="w-5 h-5" /> {/* Close icon */}
+                  <X className="w-5 h-5" /> {/* Lucide icon for close (X) */}
                 </button>
               </div>
 
-              {/* Modal body content */}
+              {/* Modal body content injected via children */}
               {children}
             </motion.div>
           </div>
