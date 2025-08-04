@@ -4,7 +4,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSam
 import { Habit } from '../../types';
 import { useHabits } from '../../hooks/useHabits';
 import { Card } from '../ui/Card';
-
+//calendar 
 interface CalendarViewProps {
   habits: Habit[];
   selectedDate: Date;
