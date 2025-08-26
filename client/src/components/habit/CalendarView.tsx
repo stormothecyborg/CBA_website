@@ -1,12 +1,20 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay } from 'date-fns';
-import { Habit } from '../../types';
+import {
+  format,
+  subDays,
+  eachDayOfInterval,
+  isSameMonth,
+  isSameDay,
+  startOfMonth,
+  endOfMonth,
+  parseISO,
+} from 'date-fns';
 import { useHabits } from '../../hooks/useHabits';
 import { Card } from '../ui/Card';
+import { motion } from 'framer-motion';
 
 interface CalendarViewProps {
-  habits: Habit[];
+  habits: any[]; // Changed type to 'any' for compatibility
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
 }
@@ -16,8 +24,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   selectedDate,
   onDateSelect
 }) => {
-  const { getHabitEntry } = useHabits();
-  
+  const { entries } = useHabits(); // Get entries from the hook
+
   const monthStart = startOfMonth(selectedDate);
   const monthEnd = endOfMonth(selectedDate);
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -26,10 +34,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     if (!habits.length) return 0;
     
     const dateStr = format(date, 'yyyy-MM-dd');
-    const completedCount = habits.reduce((count, habit) => {
-      const entry = getHabitEntry(habit.id, dateStr);
-      return count + (entry?.completed ? 1 : 0);
-    }, 0);
+    const completedCount = entries.filter(entry => entry.date === dateStr).length;
     
     return completedCount / habits.length;
   };
@@ -41,6 +46,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     if (rate < 0.9) return 'bg-blue-200';
     return 'bg-green-200';
   };
+
+  const completedHabitsForDay = habits.filter(habit => 
+    entries.some(entry => 
+      entry.habitId === habit._id && isSameDay(parseISO(entry.date), selectedDate)
+    )
+  );
 
   return (
     <Card className="p-6">
@@ -92,6 +103,35 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           );
         })}
       </div>
+
+      {/* NEW: Habit details for the selected day */}
+      {completedHabitsForDay.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Completed on {format(selectedDate, 'PP')}
+          </h3>
+          <ul className="space-y-4">
+            {completedHabitsForDay.map(habit => {
+              const entry = entries.find(e => 
+                e.habitId === habit._id && isSameDay(parseISO(e.date), selectedDate)
+              );
+              return (
+                <li key={habit._id} className="bg-gray-50 p-4 rounded-lg shadow-sm">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-2xl">{habit.emoji}</span>
+                    <span className="font-medium text-gray-900">{habit.name}</span>
+                  </div>
+                  {entry?.note && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      <strong>Note:</strong> {entry.note}
+                    </p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       <div className="mt-4 flex items-center justify-center space-x-4 text-xs text-gray-600">
         <div className="flex items-center space-x-1">

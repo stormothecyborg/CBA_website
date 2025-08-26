@@ -10,7 +10,7 @@ export const StatsOverview: React.FC = () => {
   
   const today = format(new Date(), 'yyyy-MM-dd');
   const todayCompletions = habits.filter(habit => 
-    getHabitEntry(habit.id, today)?.completed
+    getHabitEntry(habit._id, today)?.completed
   ).length;
 
   const totalStreaks = streaks.reduce((sum, streak) => sum + streak.current, 0);

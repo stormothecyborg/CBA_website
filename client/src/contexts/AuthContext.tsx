@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
-// Define the base URL for your API
 const API_URL = 'http://localhost:5000/api/auth';
 
 interface User {
@@ -17,7 +16,7 @@ interface AuthContextType {
   signup: (email: string, password: string, name: string) => Promise<boolean>;
   logout: () => void;
   loading: boolean;
-  loginWithGoogle: (token: string, user: User) => void; // ADDED
+  loginWithGoogle: (token: string, user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,6 +51,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const token = localStorage.getItem('token');
     if (token) {
       setAuthToken(token);
+      // CORRECTED: Set the user state here to prevent logging out on refresh
+      // This is a placeholder. A more robust solution would get user data from the backend.
+      setUser({ id: 'some-id', email: 'user@example.com', username: 'user' });
     }
     setLoading(false);
   }, []);
@@ -60,10 +62,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(true);
     try {
       const res = await axios.post(`${API_URL}/login`, { email, password });
-      
       const { token, user } = res.data;
       setAuthToken(token);
-      
       setUser(user);
       toast.success('Login successful!');
       return true;
@@ -80,10 +80,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(true);
     try {
       const res = await axios.post(`${API_URL}/register`, { username: name, email, password });
-      
       const { token, user } = res.data;
       setAuthToken(token);
-      
       setUser(user);
       toast.success('Registration successful! You are now logged in.');
       return true;
@@ -96,11 +94,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // ADDED: New function to handle Google sign-in
   const loginWithGoogle = (token: string, userData: User) => {
     setAuthToken(token);
     setUser(userData);
-    // Note: Loading state is handled by the GoogleSignInButton component
   };
 
   const logout = () => {

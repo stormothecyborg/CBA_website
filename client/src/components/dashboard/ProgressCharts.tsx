@@ -26,7 +26,7 @@ export const ProgressCharts: React.FC = () => {
   const weeklyData = last7Days.map((date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     const completedCount = habits.reduce((count, habit) => {
-      const entry = getHabitEntry(habit.id, dateStr);
+      const entry = getHabitEntry(habit._id, dateStr);
       return count + (entry?.completed ? 1 : 0);
     }, 0);
 
@@ -52,7 +52,7 @@ export const ProgressCharts: React.FC = () => {
 
     const completedDays = last30Days.filter((date) => {
       const dateStr = format(date, 'yyyy-MM-dd');
-      const entry = getHabitEntry(habit.id, dateStr);
+      const entry = getHabitEntry(habit._id, dateStr);
       return entry?.completed;
     }).length;
 

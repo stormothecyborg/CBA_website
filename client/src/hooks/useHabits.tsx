@@ -1,190 +1,126 @@
 import { useState, useEffect } from 'react';
-import { Habit, HabitEntry, HabitStreak } from '../types';
+import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { format, isToday, parseISO, differenceInDays } from 'date-fns';
+import { format, parseISO, differenceInDays } from 'date-fns';
+
+// These types are based on your backend schema and old frontend code
+interface Habit {
+  _id: string;
+  name: string;
+  completionDates: { date: string, note?: string }[];
+  currentStreak: number;
+  longestStreak: number;
+  description?: string;
+  emoji?: string;
+  frequency?: string;
+  customDays?: number[];
+  reminderTime?: string;
+}
+
+interface HabitEntry {
+  id: string;
+  habitId: string;
+  date: string;
+  completed: boolean;
+  note?: string;
+}
+
+interface HabitStreak {
+  habitId: string;
+  current: number;
+  longest: number;
+}
 
 export const useHabits = () => {
   const { user } = useAuth();
+  // We explicitly set the type here to resolve the `never[]` error
   const [habits, setHabits] = useState<Habit[]>([]);
   const [entries, setEntries] = useState<HabitEntry[]>([]);
   const [streaks, setStreaks] = useState<HabitStreak[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  // This effect fetches all habits from the backend on user change
   useEffect(() => {
     if (user) {
-      loadHabits();
-      loadEntries();
+      const fetchHabits = async () => {
+        try {
+          const res = await axios.get('http://localhost:5000/api/habits');
+          setHabits(res.data);
+        } catch (error) {
+          console.error('Error fetching habits:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchHabits();
     }
   }, [user]);
 
+  // This effect populates entries and streaks based on the habits fetched from the backend
   useEffect(() => {
-    calculateStreaks();
-  }, [habits, entries]);
+    if (habits.length > 0) {
+      // Recreate the entries state from the new backend data
+      const allEntries = habits.flatMap(habit =>
+        habit.completionDates.map(completion => ({
+          id: `${habit._id}-${completion.date}`,
+          habitId: habit._id,
+          date: format(parseISO(completion.date), 'yyyy-MM-dd'),
+          completed: true,
+          note: completion.note
+        }))
+      );
+      setEntries(allEntries);
 
-  const loadHabits = () => {
-    const savedHabits = localStorage.getItem('habit-tracker-habits');
-    if (savedHabits) {
-      const parsedHabits = JSON.parse(savedHabits).map((habit: any) => ({
-        ...habit,
-        createdAt: new Date(habit.createdAt)
+      // Recreate the streaks state from the new backend data
+      const newStreaks = habits.map(habit => ({
+        habitId: habit._id,
+        current: habit.currentStreak,
+        longest: habit.longestStreak,
       }));
-      setHabits(parsedHabits.filter((habit: Habit) => habit.userId === user?.id));
+      setStreaks(newStreaks);
     }
-  };
+  }, [habits]);
 
-  const loadEntries = () => {
-    const savedEntries = localStorage.getItem('habit-tracker-entries');
-    if (savedEntries) {
-      const parsedEntries = JSON.parse(savedEntries).map((entry: any) => ({
-        ...entry,
-        completedAt: entry.completedAt ? new Date(entry.completedAt) : undefined
-      }));
-      setEntries(parsedEntries);
-    }
-  };
-
-  const saveHabits = (newHabits: Habit[]) => {
-    const allHabits = JSON.parse(localStorage.getItem('habit-tracker-habits') || '[]');
-    const filteredHabits = allHabits.filter((habit: Habit) => habit.userId !== user?.id);
-    const updatedHabits = [...filteredHabits, ...newHabits];
-    localStorage.setItem('habit-tracker-habits', JSON.stringify(updatedHabits));
-  };
-
-  const saveEntries = (newEntries: HabitEntry[]) => {
-    localStorage.setItem('habit-tracker-entries', JSON.stringify(newEntries));
-  };
-
-  const addHabit = (habitData: Omit<Habit, 'id' | 'userId' | 'createdAt'>) => {
+  const addHabit = async (habitData: any) => {
     if (!user) return;
-
-    const newHabit: Habit = {
-      ...habitData,
-      id: `habit_${Date.now()}`,
-      userId: user.id,
-      createdAt: new Date(),
-    };
-
-    const updatedHabits = [...habits, newHabit];
-    setHabits(updatedHabits);
-    saveHabits(updatedHabits);
-  };
-
-  const updateHabit = (habitId: string, habitData: Partial<Habit>) => {
-    const updatedHabits = habits.map(habit =>
-      habit.id === habitId ? { ...habit, ...habitData } : habit
-    );
-    setHabits(updatedHabits);
-    saveHabits(updatedHabits);
-  };
-
-  const deleteHabit = (habitId: string) => {
-    const updatedHabits = habits.filter(habit => habit.id !== habitId);
-    const updatedEntries = entries.filter(entry => entry.habitId !== habitId);
-    
-    setHabits(updatedHabits);
-    setEntries(updatedEntries);
-    saveHabits(updatedHabits);
-    saveEntries(updatedEntries);
-  };
-
-  const toggleHabitCompletion = (habitId: string, date: string, note?: string) => {
-    const existingEntry = entries.find(
-      entry => entry.habitId === habitId && entry.date === date
-    );
-
-    let updatedEntries: HabitEntry[];
-
-    if (existingEntry) {
-      updatedEntries = entries.map(entry =>
-        entry.id === existingEntry.id
-          ? {
-              ...entry,
-              completed: !entry.completed,
-              note: note || entry.note,
-              completedAt: !entry.completed ? new Date() : undefined
-            }
-          : entry
-      );
-    } else {
-      const newEntry: HabitEntry = {
-        id: `entry_${Date.now()}`,
-        habitId,
-        date,
-        completed: true,
-        note,
-        completedAt: new Date(),
-      };
-      updatedEntries = [...entries, newEntry];
+    try {
+      const res = await axios.post('http://localhost:5000/api/habits', habitData);
+      // Update state with the new habit returned from the backend
+      setHabits(prevHabits => [...prevHabits, res.data]);
+    } catch (error) {
+      console.error('Error adding habit:', error);
     }
-
-    setEntries(updatedEntries);
-    saveEntries(updatedEntries);
   };
 
-  const calculateStreaks = () => {
-    const newStreaks: HabitStreak[] = habits.map(habit => {
-      const habitEntries = entries
-        .filter(entry => entry.habitId === habit.id && entry.completed)
-        .sort((a, b) => b.date.localeCompare(a.date));
+  const updateHabit = async (habitId: string, habitData: any) => {
+    try {
+      const res = await axios.put(`http://localhost:5000/api/habits/${habitId}`, habitData);
+      // Replace the old habit with the updated one
+      setHabits(prevHabits => prevHabits.map(h => (h._id === habitId ? res.data : h)));
+    } catch (error) {
+      console.error('Error updating habit:', error);
+    }
+  };
 
-      if (habitEntries.length === 0) {
-        return { habitId: habit.id, current: 0, longest: 0 };
-      }
+  const deleteHabit = async (habitId: string) => {
+    try {
+      await axios.delete(`http://localhost:5000/api/habits/${habitId}`);
+      // Remove the deleted habit from the state
+      setHabits(prevHabits => prevHabits.filter(h => h._id !== habitId));
+    } catch (error) {
+      console.error('Error deleting habit:', error);
+    }
+  };
 
-      let current = 0;
-      let longest = 0;
-      let currentStreak = 0;
-      
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const yesterday = format(new Date(Date.now() - 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
-      
-      // Check if habit was completed today or yesterday to maintain streak
-      const hasRecentCompletion = habitEntries.some(entry => 
-        entry.date === today || entry.date === yesterday
-      );
-
-      if (hasRecentCompletion) {
-        // Calculate current streak
-        let checkDate = new Date();
-        for (let i = 0; i < 365; i++) { // Check up to a year back
-          const dateStr = format(checkDate, 'yyyy-MM-dd');
-          const hasEntry = habitEntries.some(entry => entry.date === dateStr);
-          
-          if (hasEntry) {
-            currentStreak++;
-          } else {
-            break;
-          }
-          
-          checkDate = new Date(checkDate.getTime() - 24 * 60 * 60 * 1000);
-        }
-      }
-
-      // Calculate longest streak
-      let tempStreak = 0;
-      let lastDate: Date | null = null;
-
-      habitEntries.reverse().forEach(entry => {
-        const entryDate = parseISO(entry.date);
-        
-        if (!lastDate || differenceInDays(entryDate, lastDate) === 1) {
-          tempStreak++;
-          longest = Math.max(longest, tempStreak);
-        } else {
-          tempStreak = 1;
-        }
-        
-        lastDate = entryDate;
-      });
-
-      return {
-        habitId: habit.id,
-        current: currentStreak,
-        longest: Math.max(longest, currentStreak),
-        lastCompletedDate: habitEntries[0]?.date
-      };
-    });
-
-    setStreaks(newStreaks);
+  const toggleHabitCompletion = async (habitId: string, date: string, note?: string) => {
+    try {
+      // The backend handles the streak and entry logic
+      const res = await axios.post(`http://localhost:5000/api/habits/${habitId}/complete`, { date, note });
+      // Update the habit in the state with the new data from the backend
+      setHabits(prevHabits => prevHabits.map(h => (h._id === habitId ? res.data : h)));
+    } catch (error) {
+      console.error('Error toggling habit completion:', error);
+    }
   };
 
   const getHabitEntry = (habitId: string, date: string) => {
@@ -209,5 +145,6 @@ export const useHabits = () => {
     toggleHabitCompletion,
     getHabitEntry,
     getHabitStreak,
+    loading
   };
 };

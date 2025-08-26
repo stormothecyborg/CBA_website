@@ -2,15 +2,14 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { Edit, Trash2, Clock, Target, Calendar } from 'lucide-react';
-import { Habit } from '../../types';
 import { useHabits } from '../../hooks/useHabits';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { NoteModal } from './NoteModal';
 
 interface HabitCardProps {
-  habit: Habit;
-  onEdit: (habit: Habit) => void;
+  habit: any; // Using 'any' here for flexibility with backend data
+  onEdit: (habit: any) => void;
   onDelete: (habitId: string) => void;
 }
 
@@ -19,20 +18,20 @@ export const HabitCard: React.FC<HabitCardProps> = ({ habit, onEdit, onDelete })
   const [showNoteModal, setShowNoteModal] = useState(false);
   
   const today = format(new Date(), 'yyyy-MM-dd');
-  const todayEntry = getHabitEntry(habit.id, today);
-  const streak = getHabitStreak(habit.id);
+  const todayEntry = getHabitEntry(habit._id, today); // CHANGED: habit.id -> habit._id
+  const streak = getHabitStreak(habit._id); // CHANGED: habit.id -> habit._id
   const isCompleted = todayEntry?.completed || false;
 
   const handleToggleCompletion = () => {
     if (isCompleted) {
-      toggleHabitCompletion(habit.id, today);
+      toggleHabitCompletion(habit._id, today, todayEntry?.note); // CHANGED: habit.id -> habit._id, pass note
     } else {
       setShowNoteModal(true);
     }
   };
 
   const handleCompleteWithNote = (note?: string) => {
-    toggleHabitCompletion(habit.id, today, note);
+    toggleHabitCompletion(habit._id, today, note); // CHANGED: habit.id -> habit._id
     setShowNoteModal(false);
   };
 
@@ -41,10 +40,9 @@ export const HabitCard: React.FC<HabitCardProps> = ({ habit, onEdit, onDelete })
       case 'daily':
         return 'Daily';
       case 'weekly':
-        return 'Weekly';
       case 'custom':
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        return habit.customDays?.map(day => days[day]).join(', ') || 'Custom';
+        return habit.customDays?.map((day: string | number) => days[Number(day)]).join(', ') || 'Custom';
       default:
         return 'Daily';
     }
@@ -73,7 +71,7 @@ export const HabitCard: React.FC<HabitCardProps> = ({ habit, onEdit, onDelete })
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onDelete(habit.id)}
+              onClick={() => onDelete(habit._id)} // CHANGED: habit.id -> habit._id
             >
               <Trash2 className="w-4 h-4" />
             </Button>
