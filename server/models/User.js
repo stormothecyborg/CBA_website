@@ -13,7 +13,12 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
+    required: false,
+  },
+  googleId: { // New field added
+    type: String,
+    unique: true,
+    sparse: true, // Allows null values to be unique
   },
 });
 

@@ -1,11 +1,10 @@
-//loginPage
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import toast from 'react-hot-toast';
+import { GoogleSignInButton } from '../ui/GoogleSignInButton';
 
 interface LoginFormProps {
   onToggleMode: () => void;
@@ -83,9 +82,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
       >
         {loading ? 'Signing in...' : 'Sign in'}
       </Button>
-
+      
+      <div className="text-center text-sm text-gray-500">
+        Or
+      </div>
+      
+      <GoogleSignInButton />
+      
       <div className="text-center">
-        <p className="text-gray-600">
+        <p className="mt-2 text-gray-600">
           Don't have an account?{' '}
           <button
             type="button"

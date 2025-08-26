@@ -8,7 +8,7 @@ const API_URL = 'http://localhost:5000/api/auth';
 interface User {
   id: string;
   email: string;
-  username: string; // Updated to match backend
+  username: string;
 }
 
 interface AuthContextType {
@@ -17,6 +17,7 @@ interface AuthContextType {
   signup: (email: string, password: string, name: string) => Promise<boolean>;
   logout: () => void;
   loading: boolean;
+  loginWithGoogle: (token: string, user: User) => void; // ADDED
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,7 +38,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Function to set the auth token for all subsequent requests
   const setAuthToken = (token: string | null) => {
     if (token) {
       axios.defaults.headers.common['x-auth-token'] = token;
@@ -52,9 +52,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const token = localStorage.getItem('token');
     if (token) {
       setAuthToken(token);
-      // You could decode the token or fetch user data here if needed,
-      // but for this example, we'll wait for a login or signup event
-      // to set the user state.
     }
     setLoading(false);
   }, []);
@@ -67,7 +64,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { token, user } = res.data;
       setAuthToken(token);
       
-      // Set the user state with actual data from the backend
       setUser(user);
       toast.success('Login successful!');
       return true;
@@ -88,7 +84,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { token, user } = res.data;
       setAuthToken(token);
       
-      // Set the user state with actual data from the backend
       setUser(user);
       toast.success('Registration successful! You are now logged in.');
       return true;
@@ -101,6 +96,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // ADDED: New function to handle Google sign-in
+  const loginWithGoogle = (token: string, userData: User) => {
+    setAuthToken(token);
+    setUser(userData);
+    // Note: Loading state is handled by the GoogleSignInButton component
+  };
+
   const logout = () => {
     setUser(null);
     setAuthToken(null);
@@ -108,7 +110,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, signup, logout, loading, loginWithGoogle }}>
       {children}
     </AuthContext.Provider>
   );

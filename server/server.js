@@ -20,6 +20,7 @@ mongoose.connect(process.env.MONGO_URI, {
 // Routes (You will add these in the next steps)
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/habits', require('./routes/habitRoutes'));
+app.use('/api/auth/google', require('./routes/googleAuth'));
 
 const PORT = process.env.PORT || 5000;
 

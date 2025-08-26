@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-// Define the props for the Button component, extending default button attributes
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+// Define the props for the Button component, extending motion.button attributes
+interface ButtonProps extends React.ComponentPropsWithoutRef<typeof motion.button> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost'; // Button style variants
   size?: 'sm' | 'md' | 'lg'; // Button size options
   children: React.ReactNode; // Button content
